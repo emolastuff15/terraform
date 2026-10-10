@@ -15,8 +15,7 @@ concurrency:
 
 env:
   TF_IN_AUTOMATION: 'true'
-  # 注意：不要用 -input=false！在 Windows 上实测 terraform plan 会报
-  # "Too many command line arguments"；用这个环境变量等效且可靠
+  # 变量输入统一由环境变量关闭
   TF_INPUT: 'false'
 
 jobs:

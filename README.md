@@ -25,9 +25,11 @@ S3 桶 mycompany-dev-source1
 | 6. apply 保存的 plan，而不是重新 plan | `terraform apply tfplan`，全程没有第二次 plan；provider 版本由传过来的 lock file 保证一致 | `deploy.yml` 的 apply job |
 | 7. 独立的销毁入口，且需要显式确认 | 单独的 workflow：必须手打确认串 `DELETE-TEST-DATA`（guard job 校验），再经 `environment: lab-destroy` 人工审批 | `.github/workflows/destroy.yml` |
 
-> 注意：CI 里统一用环境变量 `TF_INPUT=false`，而不是 `-input=false`。
-> 在 Windows 上实测 `terraform plan -input=false …` 会报
-> `Too many command line arguments`，用环境变量等效且可靠。
+> 记录一个 Windows 上的坑（与 CI 无关，Linux runner 不受影响）：
+> 在 PowerShell 里**内联**写 `terraform plan -out=tfplan` 会报
+> `Too many command line arguments`——`-out=` 这种形式被 PowerShell 的参数传递拆坏了；
+> 把参数放进数组 splat（`& $tf plan @args`）或用 bash 就完全正常。
+> 变量输入统一用环境变量 `TF_INPUT=false` 关闭。
 
 ## 一次性设置
 

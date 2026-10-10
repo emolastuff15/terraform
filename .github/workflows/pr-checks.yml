@@ -12,7 +12,6 @@ permissions:
   contents: read
 
 env:
-  # 用环境变量代替 -input=false（见 deploy.yml 的说明）
   TF_INPUT: 'false'
 
 jobs:
