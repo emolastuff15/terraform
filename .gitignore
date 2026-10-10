@@ -18,10 +18,3 @@ lambda.zip
 # ---------- Python ----------
 __pycache__/
 *.pyc
-
-# ---------- IDE ----------
-.idea/
-*.iml
-
-# ---------- 本地 bootstrap 文件 ----------
-trust-policy.json
