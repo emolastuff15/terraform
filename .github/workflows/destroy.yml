@@ -59,8 +59,8 @@ jobs:
           role-session-name: gha-destroy-${{ github.run_id }}
 
       - name: terraform init
-        run: terraform init -input=false
+        run: terraform init
 
       # 交互确认已由「确认串 + 环境审批」替代，所以这里必须 -auto-approve
       - name: terraform destroy
-        run: terraform destroy -input=false -auto-approve -lock-timeout=5m
+        run: terraform destroy -auto-approve -lock-timeout=5m

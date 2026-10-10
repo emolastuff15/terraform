@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # 用环境变量代替 -input=false（见 deploy.yml 的说明）
+  TF_INPUT: 'false'
+
 jobs:
   static-checks:
     name: fmt / validate / lambda syntax
@@ -27,7 +31,7 @@ jobs:
         run: terraform fmt -check -recursive
 
       - name: terraform init (不连后端)
-        run: terraform init -backend=false -input=false
+        run: terraform init -backend=false
 
       - name: terraform validate
         run: terraform validate
