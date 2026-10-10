@@ -2,11 +2,11 @@ resource "aws_s3_bucket_notification" "this" {
   bucket = var.bucket_names[0]
 
   lambda_function {
-    lambda_function_arn = var.lambda_arn   # ← 这个
+    lambda_function_arn = var.lambda_arn # ← 这个
     events              = ["s3:ObjectCreated:*"]
     filter_prefix       = "incoming/"
   }
-    depends_on = [aws_lambda_permission.allow_s3] 
+  depends_on = [aws_lambda_permission.allow_s3]
 }
 
 resource "aws_lambda_permission" "allow_s3" {

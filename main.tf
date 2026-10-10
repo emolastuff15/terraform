@@ -23,27 +23,27 @@ variable "bucket_names" {
 }
 
 module "events" {
-  source = "./module/events"
-  bucket_names = var.bucket_names
-  lambda_arn = module.lambda.lambda_arn
-  bucket_arn = module.storage.bucket_arn
+  source        = "./module/events"
+  bucket_names  = var.bucket_names
+  lambda_arn    = module.lambda.lambda_arn
+  bucket_arn    = module.storage.bucket_arn
   function_name = module.lambda.lambda_name
 
 }
 
 module "storage" {
   source       = "./module/storage"
-  bucket_names = var.bucket_names   # ← 关键：把根模块的值赋给模块的输入
+  bucket_names = var.bucket_names # ← 关键：把根模块的值赋给模块的输入
 }
 
 module "iam" {
   source       = "./module/iam"
   bucket_names = var.bucket_names
 }
-module "lambda"{
-  source    ="./module/lambda"
-   function_name = "pdf-metadata-cataloger"
-  role_arn = module.iam.role_arn
+module "lambda" {
+  source        = "./module/lambda"
+  function_name = "pdf-metadata-cataloger"
+  role_arn      = module.iam.role_arn
 }
 
 output "bucket_arn" {
@@ -79,6 +79,6 @@ module "vpc" {
   private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
   public_subnets  = ["10.0.101.0/24"]
 
-  enable_dns_hostnames    = true
+  enable_dns_hostnames = true
 }
 

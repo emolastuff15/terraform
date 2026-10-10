@@ -1,6 +1,27 @@
+# ---------- Terraform ----------
 .terraform/
 *.tfstate
 *.tfstate.backup
-lambda.zip
+*.tfstate.lock.info
+*.tflock
+crash.log
+override.tf
+override.tf.json
 terraform.tfvars
-.terraform.lock.hcl
+
+# 注意：.terraform.lock.hcl 必须【提交】，不要忽略它
+# 它是 provider 版本锁定文件，CI 的 plan/apply 依赖它保证版本一致
+
+# ---------- Lambda 打包产物 ----------
+lambda.zip
+
+# ---------- Python ----------
+__pycache__/
+*.pyc
+
+# ---------- IDE ----------
+.idea/
+*.iml
+
+# ---------- 本地 bootstrap 文件 ----------
+trust-policy.json

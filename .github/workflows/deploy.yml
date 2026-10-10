@@ -1,0 +1,103 @@
+name: Deploy
+
+# 需求 2：从 main 分支手动触发，使用 OIDC 角色（不存任何长期密钥）
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # OIDC 换取临时 AWS 凭证
+
+# 与 destroy workflow 共用同一个组，避免两个 run 同时操作 state
+concurrency:
+  group: terraform-lab
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+
+jobs:
+  # ---------------------------------------------------------------- plan
+  plan:
+    name: plan（生成并保存 tfplan）
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: gha-plan-${{ github.run_id }}
+
+      - name: terraform init
+        run: terraform init -input=false
+
+      # 需求 4：生成保存好的 plan
+      - name: terraform plan
+        run: terraform plan -input=false -lock-timeout=5m -out=tfplan
+
+      - name: 渲染可读的 plan
+        run: terraform show -no-color tfplan > plan.txt
+
+      # 需求 5：审批人先在 run 页面直接读 plan，再去批准环境
+      - name: 写入 step summary
+        run: |
+          {
+            echo '## Terraform plan（请审阅后再批准 lab-apply）'
+            echo '```'
+            cat plan.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # 需求 4：把 plan、provider lock file、Lambda ZIP 一起交给 apply job
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          include-hidden-files: true # 否则 .terraform.lock.hcl 会被静默跳过
+          retention-days: 7
+          path: |
+            tfplan
+            plan.txt
+            .terraform.lock.hcl
+            module/lambda/lambda.zip
+
+  # --------------------------------------------------------------- apply
+  apply:
+    name: apply（需要 lab-apply 审批）
+    needs: plan
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: lab-apply # 需求 5：审批闸门
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: gha-apply-${{ github.run_id }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+
+      # 用传过来的 lock 文件初始化，保证 provider 版本与 plan 时完全一致
+      - name: terraform init
+        run: terraform init -input=false
+
+      # 需求 6：apply 保存好的 plan，绝不重新 plan
+      - name: terraform apply (saved plan)
+        run: terraform apply -input=false -lock-timeout=5m tfplan

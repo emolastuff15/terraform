@@ -1,6 +1,6 @@
-output "lambda_arn"{
+output "lambda_arn" {
   description = "lambda de arn"
-  value = aws_lambda_function.this.arn
+  value       = aws_lambda_function.this.arn
 }
 
 output "lambda_name" {

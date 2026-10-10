@@ -2,6 +2,9 @@ resource "aws_s3_bucket" "this" {
   count  = length(var.bucket_names)
   bucket = var.bucket_names[count.index]
 
+  # 需求 7：destroy 时连桶内对象一起删除（实验用的测试数据）
+  force_destroy = true
+
   tags = {
     Name = var.bucket_names[count.index]
   }

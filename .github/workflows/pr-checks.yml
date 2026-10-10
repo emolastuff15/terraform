@@ -1,0 +1,40 @@
+name: PR checks
+
+# 需求 1：PR 上的格式与校验检查
+# 全程不使用任何 AWS 凭证：
+#   - 没有 id-token 权限、不引用任何 secret
+#   - terraform init 使用 -backend=false，不连接 S3 后端
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    name: fmt / validate / lambda syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false # 保证非 0 退出码会让 job 失败
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: terraform init (不连后端)
+        run: terraform init -backend=false -input=false
+
+      - name: terraform validate
+        run: terraform validate
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Lambda 源码语法检查
+        run: python -m py_compile module/lambda/src/lambda.py

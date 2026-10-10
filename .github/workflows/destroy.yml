@@ -1,0 +1,66 @@
+name: Destroy (deletes test data)
+
+# 需求 7：销毁是独立入口，且需要显式确认
+#   第一道：必须手打 DELETE-TEST-DATA（guard job 校验）
+#   第二道：lab-destroy 环境需要人工审批
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: '输入 DELETE-TEST-DATA 确认销毁全部测试资源（不可恢复）'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-lab # 与 deploy 互斥，避免同时操作 state
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+
+jobs:
+  guard:
+    name: 确认串校验
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: 校验确认串
+        env:
+          CONFIRM: ${{ inputs.confirm }} # 通过 env 传递，避免脚本注入
+        run: |
+          if [ "$CONFIRM" != "DELETE-TEST-DATA" ]; then
+            echo "::error::确认串不匹配，拒绝执行销毁"
+            exit 1
+          fi
+
+  destroy:
+    name: destroy（需要 lab-destroy 审批）
+    needs: guard
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: lab-destroy # 第二道人工闸门
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: gha-destroy-${{ github.run_id }}
+
+      - name: terraform init
+        run: terraform init -input=false
+
+      # 交互确认已由「确认串 + 环境审批」替代，所以这里必须 -auto-approve
+      - name: terraform destroy
+        run: terraform destroy -input=false -auto-approve -lock-timeout=5m
